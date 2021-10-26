@@ -33,11 +33,15 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class CNNNet(nn.Module):
     def __init__(self):
         super(CNNNet,self).__init__()
+        # conv1 weight count: 5 X 5 X 3 X 16 = 1200  bias count : 16
         self.conv1 = nn.Conv2d(in_channels=3,out_channels=16,kernel_size=5,stride=1)
         self.pool1 = nn.MaxPool2d(kernel_size=2,stride=2)
+        # conv2 weight count: 3 X 3 X 16 X 36 = 5184  bias count : 36
         self.conv2 = nn.Conv2d(in_channels=16,out_channels=36,kernel_size=3,stride=1)
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # fc1 weight count: 1296 X 128 = 165888  bias count : 128
         self.fc1 = nn.Linear(1296,128)
+        # fc1 weight count: 128 X 10 = 1280  bias count : 10
         self.fc2 = nn.Linear(128,10)      
 
     def forward(self,x):
@@ -94,10 +98,12 @@ for m in net.modules():
 
 # print('Finished Training')
 
+# A. save or load model
 # torch.save(net, "./weight/cnn.pth")
 net = torch.load("./weight/cnn.pth")
 print('Finished loading pth')
 
+# B. export model to onnx
 torch.onnx.export(net, torch.ones((1, 3, 32, 32)).to('cpu'),
                       'weight/cnn.onnx',
                       verbose=True, opset_version=12, input_names=['images'],
@@ -105,6 +111,7 @@ torch.onnx.export(net, torch.ones((1, 3, 32, 32)).to('cpu'),
 
 net.eval()
 
+# C. get one test set image
 writer = SummaryWriter(log_dir='logs',comment='feature map')
 for i, data in enumerate(testloader, 0):
         # 获取训练数据
@@ -117,6 +124,7 @@ for i, data in enumerate(testloader, 0):
         print('i:{} x.shape:{} x.size:{}'.format(i,x.shape,x.size(0)))
         break
 
+# D. dump input image
 img_grid = vutils.make_grid(x, normalize=True, scale_each=True, nrow=2)
 writer.add_image(f'ori_image', img_grid, global_step=0)
 fig = plt.figure()
@@ -124,8 +132,10 @@ plt.imshow(img_grid.numpy().transpose((1, 2, 0)))
 plt.show()
 utils.save_image(img_grid,'output/test02.png')
 
+# E. show dump feature map, calc layers by layers
+print('......................E. show dump feature map, calc layers by layers........................')
 for name, layer in net._modules.items():
-    print('..............................................')
+    print('............................................')
     print('name:{}'.format(name))
     print('layer:{}'.format(layer))
     print('before x.shape:{}'.format(x.shape))
@@ -149,3 +159,20 @@ for name, layer in net._modules.items():
         plt.show()
         utils.save_image(img_grid,out_image_name)        
         print('write image name:{}'.format(out_image_name))
+
+# F. show net all layers
+print('...............F. show net all layers.....................')
+# # conv1 weight count: 5 X 5 X 3 X 16 = 1200  bias count : 16
+# self.conv1 = nn.Conv2d(in_channels=3,out_channels=16,kernel_size=5,stride=1)
+# self.pool1 = nn.MaxPool2d(kernel_size=2,stride=2)
+# # conv2 weight count: 3 X 3 X 16 X 36 = 5184  bias count : 36
+# self.conv2 = nn.Conv2d(in_channels=16,out_channels=36,kernel_size=3,stride=1)
+# self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+# # fc1 weight count: 1296 X 128 = 165888  bias count : 128
+# self.fc1 = nn.Linear(1296,128)
+# # fc1 weight count: 128 X 10 = 1280  bias count : 10
+# self.fc2 = nn.Linear(128,10)      
+for m in net.modules():
+    print('m:{}'.format(m))
+    if isinstance(m,nn.Conv2d) or isinstance(m,nn.Linear):
+        print('weight count:{} bias count:{}'.format(m.weight.numel(),m.bias.numel()))    
