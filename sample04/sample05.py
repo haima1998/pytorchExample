@@ -41,6 +41,7 @@ class CNNNet(nn.Module):
         self.fc2 = nn.Linear(128,10)      
 
     def forward(self,x):
+        #intput shape: 1, 3, 32, 32
         x=self.pool1(F.relu(self.conv1(x)))
         x=self.pool2(F.relu(self.conv2(x)))
         #print(x.shape)
@@ -96,6 +97,11 @@ for m in net.modules():
 # torch.save(net, "./weight/cnn.pth")
 net = torch.load("./weight/cnn.pth")
 print('Finished loading pth')
+
+torch.onnx.export(net, torch.ones((1, 3, 32, 32)).to('cpu'),
+                      'weight/cnn.onnx',
+                      verbose=True, opset_version=12, input_names=['images'],
+                      output_names=['output'])
 
 net.eval()
 
