@@ -23,16 +23,16 @@ transforms.Compose([
 
 
 my_trans=transforms.Compose([
-    transforms.RandomResizedCrop(224),
-    transforms.RandomHorizontalFlip(),
+    #transforms.RandomResizedCrop(224),
+    #transforms.RandomHorizontalFlip(),
     transforms.ToTensor()
 ])
 train_data = datasets.ImageFolder('./data/torchvision_data', transform=my_trans)
-train_loader = data.DataLoader(train_data,batch_size=2,shuffle=True,)
+train_loader = data.DataLoader(train_data,batch_size=2,shuffle=False,)
                                             
 for i_batch, img in enumerate(train_loader):
     if i_batch == 0:
-        #print(img[0])
+        print(img[0].shape)
         print(img[1])
         fig = plt.figure()
         grid = utils.make_grid(img[0])

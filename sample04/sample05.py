@@ -6,7 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torchvision.utils as vutils
-
+import matplotlib.pyplot as plt
+from torchvision import transforms, utils
 
 transform = transforms.Compose(
     [transforms.ToTensor(),
@@ -19,12 +20,13 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
 
 testset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                        download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=4,
-                                         shuffle=False, num_workers=2)
+testloader = torch.utils.data.DataLoader(testset, batch_size=1,
+                                         shuffle=False, num_workers=1)
 
 classes = ('plane', 'car', 'bird', 'cat',
            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
+print('gpu status:{}.'.format(torch.cuda.is_available()))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -66,53 +68,78 @@ for m in net.modules():
         nn.init.normal_(m.weight)#全连接层参数初始化
 
 #训练模型
-for epoch in range(2):  
+# for epoch in range(2):  
 
-    running_loss = 0.0
-    for i, data in enumerate(trainloader, 0):
-        # 获取训练数据
-        inputs, labels = data
-        inputs, labels = inputs.to(device), labels.to(device)
+#     running_loss = 0.0
+#     for i, data in enumerate(trainloader, 0):
+#         # 获取训练数据
+#         inputs, labels = data
+#         inputs, labels = inputs.to(device), labels.to(device)
 
-        # 权重参数梯度清零
-        optimizer.zero_grad()
+#         # 权重参数梯度清零
+#         optimizer.zero_grad()
 
-        # 正向及反向传播
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+#         # 正向及反向传播
+#         outputs = net(inputs)
+#         loss = criterion(outputs, labels)
+#         loss.backward()
+#         optimizer.step()
 
-        # 显示损失值
-        running_loss += loss.item()
-        if i % 2000 == 1999:    # print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %(epoch + 1, i + 1, running_loss / 2000))
-            running_loss = 0.0
+#         # 显示损失值
+#         running_loss += loss.item()
+#         if i % 2000 == 1999:    # print every 2000 mini-batches
+#             print('[%d, %5d] loss: %.3f' %(epoch + 1, i + 1, running_loss / 2000))
+#             running_loss = 0.0
 
-print('Finished Training')
+# print('Finished Training')
+
+# torch.save(net, "./weight/cnn.pth")
+net = torch.load("./weight/cnn.pth")
+print('Finished loading pth')
+
+net.eval()
 
 writer = SummaryWriter(log_dir='logs',comment='feature map')
-for i, data in enumerate(trainloader, 0):
+for i, data in enumerate(testloader, 0):
         # 获取训练数据
         inputs, labels = data
         inputs, labels = inputs.to(device), labels.to(device)
+        outputs = net(inputs)
+        print('i:{} inputs {}'.format(i,inputs[0].shape))
+        print('i:{} labels {}'.format(i,labels[0]))
         x=inputs[0].unsqueeze(0)
+        print('i:{} x.shape:{} x.size:{}'.format(i,x.shape,x.size(0)))
         break
 
 img_grid = vutils.make_grid(x, normalize=True, scale_each=True, nrow=2)
+writer.add_image(f'ori_image', img_grid, global_step=0)
+fig = plt.figure()
+plt.imshow(img_grid.numpy().transpose((1, 2, 0)))
+plt.show()
+utils.save_image(img_grid,'output/test02.png')
 
-net.eval()
 for name, layer in net._modules.items():
+    print('..............................................')
+    print('name:{}'.format(name))
+    print('layer:{}'.format(layer))
+    print('before x.shape:{}'.format(x.shape))
 
     # 为fc层预处理x
     x = x.view(x.size(0), -1) if "fc" in name else x
     print(x.size())
 
     x = layer(x)
-    print(f'{name}')
+    print('after calc x.shape:{}'.format(x.shape))
 
     # 查看卷积层的特征图
     if  'layer' in name or 'conv' in name:
         x1 = x.transpose(0, 1)  # C，B, H, W  ---> B，C, H, W
+        print('dump feature map name:{} shape:{}'.format(name,x1.shape))
         img_grid = vutils.make_grid(x1, normalize=True, scale_each=True, nrow=4)  # normalize进行归一化处理
         writer.add_image(f'{name}_feature_maps', img_grid, global_step=0)
+        out_image_name = "output/feature_maps_" + name + ".png"
+        fig = plt.figure()
+        plt.imshow(img_grid.numpy().transpose((1, 2, 0)))
+        plt.show()
+        utils.save_image(img_grid,out_image_name)        
+        print('write image name:{}'.format(out_image_name))
