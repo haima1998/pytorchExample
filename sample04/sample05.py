@@ -30,6 +30,13 @@ print('gpu status:{}.'.format(torch.cuda.is_available()))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+class Identity(nn.Module):
+    def __init__(self):
+        super(Identity, self).__init__()
+        
+    def forward(self, x):
+        return x
+
 class CNNNet(nn.Module):
     def __init__(self):
         super(CNNNet,self).__init__()
@@ -50,7 +57,7 @@ class CNNNet(nn.Module):
         x=self.pool2(F.relu(self.conv2(x)))
         #print(x.shape)
         x=x.view(-1,36*6*6)
-        x=F.relu(self.fc2(F.relu(self.fc1(x))))
+        # x=F.relu(self.fc2(F.relu(self.fc1(x))))  #if rm this line,can make output onnx no fc layer
         return x
 
 net = CNNNet()
@@ -103,11 +110,22 @@ for m in net.modules():
 net = torch.load("./weight/cnn.pth")
 print('Finished loading pth')
 
+# net.fc2 = Identity()
+# print('model dict:{}'.format(net.state_dict()))
+# print('model model:{}'.format(net.model ))
+# my_net = nn.Sequential(*list(net.modules())[:-1])
+print('................begin modules................')
+print(list(net.modules()))
+# print(list(my_net))
+print('................end modules................')
+# print('model:{}'.format(net))
+
 # B. export model to onnx
 torch.onnx.export(net, torch.ones((1, 3, 32, 32)).to('cpu'),
                       'weight/cnn.onnx',
                       verbose=True, opset_version=12, input_names=['images'],
                       output_names=['output'])
+print('finish export onnx')
 
 net.eval()
 
