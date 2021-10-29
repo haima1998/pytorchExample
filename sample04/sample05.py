@@ -30,6 +30,9 @@ print('gpu status:{}.'.format(torch.cuda.is_available()))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+#https://pytorch.org/docs/stable/_modules/torch/nn/modules/module.html#Module
+## nn.Module define
+
 class Identity(nn.Module):
     def __init__(self):
         super(Identity, self).__init__()
@@ -194,3 +197,14 @@ for m in net.modules():
     print('m:{}'.format(m))
     if isinstance(m,nn.Conv2d) or isinstance(m,nn.Linear):
         print('weight count:{} bias count:{}'.format(m.weight.numel(),m.bias.numel()))    
+
+
+# F. show net all parameter
+print('...............F. show net all parameter.....................')
+for name, param in net.named_parameters():
+    # if name in ['bias']:
+    # print(param.size())
+    print('.............................................')
+    print('name:{} requires_grad:{}'.format(name,param.requires_grad))
+    print('param.shape:{} total count:{}'.format(param.size(),param.numel()))
+    # print('param content:{}'.format(param))
